@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<google-site-verification: googleb4a4d10501ef0b16.html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nazir Pro Edits</title>
+
+<!-- Google site verification -->
+<meta name="google-site-verification" content="b4a4d10501ef0b16" />
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+  background: #1e1e2f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Animated Welcome Page */
+#welcomeScreen {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg,#00c6ff,#0072ff);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 10;
+  transition: opacity 1s ease;
+}
+#welcomeScreen h1 {
+  font-size: 4em;
+  margin: 0;
+  text-align: center;
+  animation: fadeIn 2s ease;
+}
+#welcomeScreen p {
+  font-size: 1.5em;
+  margin-top: 10px;
+  animation: fadeIn 2s ease 1s;
+}
+@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+/* Editor Toolbar */
+.toolbar {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  background: #2c2c3e;
+  padding: 5px;
+  border-bottom: 2px solid #0077cc;
+  z-index:5;
+  display: none; /* hide initially */
+}
+.toolbar button, .toolbar select, .toolbar input[type=color], .toolbar input[type=file] {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 5px;
+  border: 1px solid #0077cc;
+  background: #1e1e2f;
+  color: #fff;
+  cursor: pointer;
+}
+
+#editor {
+  margin-top: 10px;
+  border: 2px solid #0077cc;
+  background: #fff;
+  position: relative;
+  z-index: 1;
+  display: none; /* hide initially */
+}
+canvas {
+  display: block;
+  background: #fff;
+  cursor: crosshair;
+}
+</style>
+</head>
+<body>
+
+<!-- Animated Welcome Screen -->
+<div id="welcomeScreen">
+  <h1>Welcome to Nazir Pro Edits</h1>
+  <p>Professional Startup Editor</p>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar" id="toolbar">
+  <input type="file" id="fileInput" accept="image/*">
+  <button id="draw">Draw</button>
+  <button id="line">Line</button>
+  <button id="rectangle">Rectangle</button>
+  <button id="circle">Circle</button>
+  <button id="ellipse">Ellipse</button>
+  <button id="polygon">Polygon</button>
+  <button id="textBtn">Text</button>
+  <button id="eraser">Eraser</button>
+  <button id="sticker">Sticker</button>
+  <button id="shape">Shape</button>
+  <input type="color" id="colorPicker" value="#0077cc">
+  <input type="color" id="gradColor" value="#ff0000">
+  <button id="gradient">Gradient Fill</button>
+  <button id="clear">Clear</button>
+  <button id="undo">Undo</button>
+  <button id="redo">Redo</button>
+  <button id="save">Save</button>
+  <button id="bgChange">Background</button>
+  <button id="layers">Toggle Layers</button>
+  <button id="zoomIn">Zoom In</button>
+  <button id="zoomOut">Zoom Out</button>
+</div>
+
+<!-- Canvas -->
+<div id="editor">
+  <canvas id="canvas" width="1000" height="600"></canvas>
+</div>
+
+<script>
+const welcome = document.getElementById('welcomeScreen');
+const toolbar = document.getElementById('toolbar');
+const editor = document.getElementById('editor');
+
+// Show welcome screen 3 seconds then fade
+setTimeout(()=>{
+  welcome.style.opacity=0;
+  setTimeout(()=>{
+    welcome.style.display='none';
+    toolbar.style.display='flex';
+    editor.style.display='block';
+  },1000);
+},3000);
+
+// Canvas and Tools
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let drawing=false, tool='draw', color=document.getElementById('colorPicker').value;
+let fontSize=16, history=[], redoStack=[];
+let startX,startY;
+
+// Save history for undo/redo
+function saveHistory(){
+  history.push(canvas.toDataURL());
+  if(history.length>50) history.shift();
+}
+
+// File upload
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(evt){
+    const img=new Image();
+    img.src=evt.target.result;
+    img.onload=function(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      saveHistory();
+    }
+  }
+  reader.readAsDataURL(file);
+});
+
+// Mouse Events
+canvas.addEventListener('mousedown', e=>{
+  drawing=true; startX=e.offsetX; startY=e.offsetY;
+  if(tool==='text'){
+    const text=prompt('Enter text:');
+    if(text){ ctx.fillStyle=color; ctx.font=fontSize+'px Arial'; ctx.fillText(text,startX,startY); saveHistory();}
+    drawing=false;
+  }
+});
+canvas.addEventListener('mouseup', e=>{
+  if(!drawing) return;
+  const endX=e.offsetX, endY=e.offsetY;
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2;
+  if(tool==='line'){ctx.beginPath(); ctx.moveTo(startX,startY); ctx.lineTo(endX,endY); ctx.stroke();}
+  else if(tool==='rectangle'){ctx.strokeRect(startX,startY,endX-startX,endY-startY);}
+  else if(tool==='circle'){ctx.beginPath(); let r=Math.hypot(endX-startX,endY-startY); ctx.arc(startX,startY,r,0,Math.PI*2); ctx.stroke();}
+  else if(tool==='ellipse'){ctx.beginPath(); ctx.ellipse(startX+(endX-startX)/2,startY+(endY-startY)/2,Math.abs(endX-startX)/2,Math.abs(endY-startY)/2,0,0,2*Math.PI); ctx.stroke();}
+  else if(tool==='polygon'){let sides=5,radius=Math.hypot(endX-startX,endY-startY); ctx.beginPath(); for(let i=0;i<sides;i++){let x=startX+radius*Math.cos(2*Math.PI*i/sides); let y=startY+radius*Math.sin(2*Math.PI*i/sides); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.closePath(); ctx.stroke();}
+  else if(tool==='draw'){ctx.beginPath(); ctx.moveTo(startX,startY); ctx.lineTo(endX,endY); ctx.stroke();}
+  else if(tool==='eraser'){ctx.clearRect(startX-5,startY-5,endX-startX+10,endY-startY+10);}
+  saveHistory(); drawing=false;
+});
+canvas.addEventListener('mousemove', e=>{
+  if(!drawing || (tool!=='draw' && tool!=='eraser')) return;
+  ctx.strokeStyle=color; ctx.lineWidth=2;
+  if(tool==='draw'){ctx.lineTo(e.offsetX,e.offsetY); ctx.stroke();}
+  else if(tool==='eraser'){ctx.clearRect(e.offsetX-5,e.offsetY-5,10,10);}
+});
+
+// Toolbar buttons
+document.getElementById('draw').onclick=()=>{tool='draw'};
+document.getElementById('line').onclick=()=>{tool='line'};
+document.getElementById('rectangle').onclick=()=>{tool='rectangle'};
+document.getElementById('circle').onclick=()=>{tool='circle'};
+document.getElementById('ellipse').onclick=()=>{tool='ellipse'};
+document.getElementById('polygon').onclick=()=>{tool='polygon'};
+document.getElementById('textBtn').onclick=()=>{tool='text'};
+document.getElementById('eraser').onclick=()=>{tool='eraser'};
+document.getElementById('colorPicker').onchange=(e)=>{color=e.target.value};
+
+document.getElementById('clear').onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height); saveHistory();};
+document.getElementById('undo').onclick=()=>{if(history.length>0){redoStack.push(canvas.toDataURL()); let last=history.pop(); let img=new Image(); img.src=last; img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0);}}};
+document.getElementById('redo').onclick=()=>{if(redoStack.length>0){let redoImg=redoStack.pop(); let img=new Image(); img.src=redoImg; img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0);}}};
+document.getElementById('save').onclick=()=>{const link=document.createElement('a'); link.download='nazir-pro-edit.png'; link.href=canvas.toDataURL(); link.click();};
+document.getElementById('bgChange').onclick=()=>{let bg=prompt('Enter background color or hex:','#ffffff'); if(bg){canvas.style.background=bg;}};
+document.getElementById('layers').onclick=()=>{alert('Layers toggle feature coming soon!');};
+document.getElementById('zoomIn').onclick=()=>{canvas.width*=1.2; canvas.height*=1.2;};
+document.getElementById('zoomOut').onclick=()=>{canvas.width/=1.2; canvas.height/=1.2;};
+
+// Initialize history
+saveHistory();
+</script>
+
+</body>
+</html>
